@@ -133,7 +133,7 @@ The app starts on `http://localhost:8080` against a containerized Postgres.
 
 ## Deployment (Railway)
 
-**Live URL:** _TODO — fill in after the first successful deploy._
+**Live URL:** https://ms-minipay-engine-production.up.railway.app (Swagger UI: [`/swagger-ui/index.html`](https://ms-minipay-engine-production.up.railway.app/swagger-ui/index.html))
 
 CI/CD is GitHub Actions-driven (`.github/workflows/ci-cd.yml`):
 
