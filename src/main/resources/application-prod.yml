@@ -9,6 +9,13 @@ spring:
     show-sql: false
     open-in-view: false
 
+server:
+  # Railway terminates TLS at its edge and forwards plain HTTP to the container; trust its
+  # X-Forwarded-Proto/Host headers so self-referencing URLs (incl. the springdoc-generated
+  # OpenAPI "servers" entry) resolve to https instead of http (which Swagger UI's "Try it
+  # out" then refuses to call from an https page as mixed content).
+  forward-headers-strategy: framework
+
 minipay:
   jwt:
     secret: ${JWT_SECRET}
