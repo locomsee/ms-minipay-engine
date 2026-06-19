@@ -27,8 +27,8 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
 
-    @Operation(summary = "Login and obtain a JWT",
-            description = "Demo users: admin/admin123 (ROLE_ADMIN), user/user123 (ROLE_USER)")
+    @Operation(summary = "Login API to obtain a JWT",
+            description = "Demo users: dlightadmin (ROLE_ADMIN), dlightuser (ROLE_USER)")
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
         Authentication authentication = authenticationManager.authenticate(

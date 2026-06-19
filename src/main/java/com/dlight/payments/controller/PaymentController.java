@@ -24,9 +24,11 @@ import com.dlight.payments.entity.PaymentStatus;
 import com.dlight.payments.service.PaymentService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 
 @Tag(name = "Payments", description = "Payment initiation, status, history and webhook simulation")
 @RestController
@@ -37,21 +39,25 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @Operation(summary = "Initiate a payment", description = "Creates a payment and synchronously resolves it via the mock payment gateway")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     public ResponseEntity<PaymentResponseDto> initiatePayment(@Valid @RequestBody PaymentRequestDto request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.initiatePayment(request));
     }
 
     @Operation(summary = "Get payment status by id")
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{id}")
     public ResponseEntity<PaymentStatusResponseDto> getPaymentStatus(@PathVariable UUID id) {
         return ResponseEntity.ok(paymentService.getPaymentStatus(id));
     }
 
-    @Operation(summary = "List transaction history", description = "Supports pagination, sorting and filtering by status")
+    @Operation(summary = "List transaction history", description = "Supports pagination, sorting and filtering by status. ADMIN role required.")
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping
     public ResponseEntity<Page<PaymentStatusResponseDto>> getPaymentHistory(
             @RequestParam(required = false) PaymentStatus status,
+            @ParameterObject
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(paymentService.getPaymentHistory(status, pageable));
     }
