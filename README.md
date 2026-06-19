@@ -1,5 +1,6 @@
 # MiniPay – Payment & Notification Microservice
 
+![CI/CD](https://github.com/locomsee/ms-minipay-engine/actions/workflows/ci-cd.yml/badge.svg)
 ![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-6DB33F?logo=springboot&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
@@ -129,6 +130,28 @@ The app starts on `http://localhost:8080` against a containerized Postgres.
    ./mvnw spring-boot:run
    ```
    Defaults to the `dev` profile. Override with `SPRING_PROFILES_ACTIVE=prod` (requires `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` env vars) for the production profile.
+
+## Deployment (Railway)
+
+**Live URL:** _TODO — fill in after the first successful deploy._
+
+CI/CD is GitHub Actions-driven (`.github/workflows/ci-cd.yml`):
+
+- **`build-test`** runs on every push and pull request: Java 21 setup, Maven dependency cache, `./mvnw -B verify` (full suite, including the Testcontainers-backed integration tests — GitHub's `ubuntu-latest` runners have Docker preinstalled).
+- **`deploy`** runs only on pushes to `main`, after `build-test` passes: installs the Railway CLI and runs `railway up`, which builds `Dockerfile` remotely on Railway and deploys it. Build/health-check behavior is pinned in `railway.json` (Dockerfile builder, `/actuator/health` healthcheck).
+
+One-time Railway setup (manual, via the Railway dashboard):
+
+1. Create a Railway project, add a **PostgreSQL** plugin to it, and add a service for this app (name it `ms-minipay-engine` to match the workflow's `--service` flag, or update the workflow to match).
+2. Set the service's environment variables — see `.env.example` for the full list:
+   - `SPRING_PROFILES_ACTIVE=prod`
+   - `JWT_SECRET=<strong random value>`
+   - `DB_URL=jdbc:postgresql://${{Postgres.PGHOST}}:${{Postgres.PGPORT}}/${{Postgres.PGDATABASE}}`
+   - `DB_USERNAME=${{Postgres.PGUSER}}`
+   - `DB_PASSWORD=${{Postgres.PGPASSWORD}}`
+3. Generate a Railway token and add it to this repo as a GitHub Actions secret named `RAILWAY_TOKEN` (Settings → Secrets and variables → Actions).
+
+Flyway migrates the schema automatically on first boot — no manual migration step needed. The app reads its HTTP port from the `PORT` env var (Railway sets this dynamically; defaults to `8080` otherwise).
 
 ## API examples
 
