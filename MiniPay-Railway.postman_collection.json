@@ -1,0 +1,204 @@
+{
+  "info": {
+    "name": "MiniPay - Railway (Production)",
+    "description": "Payment & Notification microservice - live Railway deployment. Run 'Login as Admin' and 'Login as User' first; their responses auto-populate the {{adminToken}}/{{userToken}} collection variables used by the rest of the requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://ms-minipay-engine-production.up.railway.app", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "userToken", "value": "", "type": "string" },
+    { "key": "paymentId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.collectionVariables.set('adminToken', data.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"dlightadmin\",\n  \"password\": \"bJopnie@uu\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Login as User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const data = pm.response.json();",
+                  "pm.collectionVariables.set('userToken', data.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"dlightuser\",\n  \"password\": \"njffd@4@bhfd\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Login with Invalid Credentials (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"dlightadmin\",\n  \"password\": \"wrong-password\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Initiate Payment (SUCCESS, amount <= 10000)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const data = pm.response.json();",
+                  "pm.collectionVariables.set('paymentId', data.paymentId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{userToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500.00,\n  \"phoneNumber\": \"254712345678\",\n  \"paymentMethod\": \"MPESA\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api", "payments"] }
+          }
+        },
+        {
+          "name": "Initiate Payment (FAILED, amount > 10000)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{userToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 20000.00,\n  \"phoneNumber\": \"254712345678\",\n  \"paymentMethod\": \"CARD\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api", "payments"] }
+          }
+        },
+        {
+          "name": "Initiate Payment without Token (expect 401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500.00,\n  \"phoneNumber\": \"254712345678\",\n  \"paymentMethod\": \"MPESA\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api", "payments"] }
+          }
+        },
+        {
+          "name": "Get Payment Status by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{userToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{paymentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments", "{{paymentId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Transaction History (ADMIN only)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments?page=0&size=20&status=SUCCESS",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payments"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "status", "value": "SUCCESS", "description": "PENDING | SUCCESS | FAILED - remove to list all" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Transaction History as USER (expect 403)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{userToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/payments", "host": ["{{baseUrl}}"], "path": ["api", "payments"] }
+          }
+        },
+        {
+          "name": "Simulate Webhook Callback (no auth required)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"{{paymentId}}\",\n  \"status\": \"SUCCESS\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/payments/webhook", "host": ["{{baseUrl}}"], "path": ["api", "payments", "webhook"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Actuator",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"] }
+          }
+        }
+      ]
+    }
+  ]
+}

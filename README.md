@@ -89,7 +89,7 @@ The fallback is intentionally on `@Retry`, not `@CircuitBreaker`: Spring's defau
 > [!NOTE]
 > - **PostgreSQL only, no H2.** The assignment allows H2 or PostgreSQL; we use PostgreSQL exclusively (with Flyway migrations and Testcontainers in tests) to stay closer to production behavior.
 > - **Bounded `@Async` executor as the in-memory SMS queue.** `AsyncConfig` defines a `ThreadPoolTaskExecutor` (`notificationExecutor`) with a bounded queue — this queue is the "simple in-memory queue" called for as an SMS fallback mechanism, rather than a separate queue data structure.
-> - **Swagger instead of a separate Postman collection.** The "Postman Collection or Swagger link" deliverable is satisfied via Swagger UI (see below).
+> - **Both Swagger and a Postman collection are provided** — the "Postman Collection or Swagger link" deliverable doesn't strictly require both, but the Postman collection is pre-wired with auth token chaining, which is handy for a quick manual run-through.
 > - **JWT auth uses in-memory demo users**, not a user registration/database flow — out of scope for this assignment.
 > - **`transactionReference` format:** `TXN-<yyyyMMddHHmmss>-<8-char random alphanumeric>`, generated at creation time.
 
@@ -187,6 +187,10 @@ Mock gateway rule (deterministic mode, default): amount ≤ 10000 → `SUCCESS`,
 ## Swagger / OpenAPI
 
 Once running: `http://localhost:8080/swagger-ui.html`
+
+## Postman collection
+
+[`MiniPay-Railway.postman_collection.json`](MiniPay-Railway.postman_collection.json) - import into Postman and run. Pre-wired with collection variables: logging in as admin/user auto-populates `{{adminToken}}`/`{{userToken}}` (via each request's test script), and initiating a payment auto-populates `{{paymentId}}` for the status/webhook requests that follow. `baseUrl` defaults to the live Railway deployment — change the collection variable to `http://localhost:8080` to run against a local instance instead.
 
 ## Testing
 
