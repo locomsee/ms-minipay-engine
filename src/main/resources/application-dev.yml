@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/minipay
+    username: minipay
+    password: minipay
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    open-in-view: false
+
+logging:
+  level:
+    com.dlight.payments: DEBUG
