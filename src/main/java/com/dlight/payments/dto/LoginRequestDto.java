@@ -5,11 +5,11 @@ import jakarta.validation.constraints.NotBlank;
 
 public record LoginRequestDto(
 
-        @Schema(example = "admin")
+        @Schema(example = "dlightadmin")
         @NotBlank(message = "username is required")
         String username,
 
-        @Schema(example = "admin123")
+        @Schema(example = "bJopnie@uu")
         @NotBlank(message = "password is required")
         String password
 ) {
