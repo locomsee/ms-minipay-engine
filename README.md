@@ -84,13 +84,26 @@ Missing/invalid token → `401`; authenticated but wrong role → `403` (both as
 
 The fallback is intentionally on `@Retry`, not `@CircuitBreaker`: Spring's default aspect order here runs Retry outside CircuitBreaker, so a fallback on the inner `@CircuitBreaker` would swallow the exception after the very first attempt and starve Retry of anything to retry.
 
+## Rate limiting
+
+A per-client `RateLimitingFilter` (`security` package) sits in the Spring Security chain right after JWT auth resolves identity. It's a pure web-layer concern — `PaymentServiceImpl`, `SmsNotificationService`, and every other service-layer class are completely unaware it exists. Uses Resilience4j's `RateLimiterRegistry` directly (not the `@RateLimiter` annotation, which only supports one shared global limiter per method) so each client gets an independent budget:
+
+| Endpoint | Key | Limit |
+|---|---|---|
+| `POST /api/auth/login` | client IP | 5 / minute |
+| `POST /api/payments/webhook` | client IP | 20 / minute |
+| `POST /api/payments` | authenticated username | 10 / minute |
+
+Exceeding a limit returns `429` with the same `ErrorResponse` JSON shape used for 401/403. Client IP is read from `X-Forwarded-For` (first entry) since Railway terminates TLS and proxies the connection — falls back to `request.getRemoteAddr()` for local/direct connections. `GET` endpoints are intentionally unlimited (read-only, lower abuse risk). Limits are tunable purely via the `resilience4j.ratelimiter.configs.*` block in `application.yml` — no code changes needed.
+
 ## Tradeoffs and assumptions
 
 > [!NOTE]
 > - **PostgreSQL only, no H2.** The assignment allows H2 or PostgreSQL; we use PostgreSQL exclusively (with Flyway migrations and Testcontainers in tests) to stay closer to production behavior.
 > - **Bounded `@Async` executor as the in-memory SMS queue.** `AsyncConfig` defines a `ThreadPoolTaskExecutor` (`notificationExecutor`) with a bounded queue — this queue is the "simple in-memory queue" called for as an SMS fallback mechanism, rather than a separate queue data structure.
-> - **Both Swagger and a Postman collection are provided** — the "Postman Collection or Swagger link" deliverable doesn't strictly require both, but the Postman collection is pre-wired with auth token chaining, which is handy for a quick manual run-through.
+> - **Both Swagger and a Postman collection are provided** — the "Postman Collection or Swagger link" the Postman collection is pre-wired with auth token chaining, which is handy for a quick manual run-through.
 > - **JWT auth uses in-memory demo users**, not a user registration/database flow — out of scope for this assignment.
+> - **Rate limiter keys are retained forever, with no eviction.** Each unique IP/username gets its own `RateLimiter` instance in the registry for the life of the JVM. Acceptable at this app's scale and uptime; a long-running deployment with high client cardinality would need `RateLimiterRegistry.remove(name)` on a sweep, or a Caffeine-backed alternative (e.g. Bucket4j) instead of the raw registry.
 > - **`transactionReference` format:** `TXN-<yyyyMMddHHmmss>-<8-char random alphanumeric>`, generated at creation time.
 
 ## Tech stack
@@ -198,8 +211,8 @@ Once running: `http://localhost:8080/swagger-ui.html`
 ./mvnw test
 ```
 
-- **Unit tests** (Mockito): `PaymentServiceImplTest`, `MockPaymentGatewayClientTest`, `SmsNotificationServiceTest`, `JwtServiceTest`.
-- **Integration tests** (Testcontainers PostgreSQL): `PaymentRepositoryIntegrationTest`, `PaymentControllerIntegrationTest` (incl. JWT auth/role checks), `AuthControllerIntegrationTest`, `SmsNotificationServiceResilienceTest` (exercises the real Retry/CircuitBreaker AOP proxy).
+- **Unit tests** (Mockito): `PaymentServiceImplTest`, `MockPaymentGatewayClientTest`, `SmsNotificationServiceTest`, `JwtServiceTest`, `RateLimitingFilterTest`.
+- **Integration tests** (Testcontainers PostgreSQL): `PaymentRepositoryIntegrationTest`, `PaymentControllerIntegrationTest` (incl. JWT auth/role checks), `AuthControllerIntegrationTest`, `SmsNotificationServiceResilienceTest` (exercises the real Retry/CircuitBreaker AOP proxy), `RateLimitingIntegrationTest`.
 
 Requires Docker running locally (Testcontainers spins up a real Postgres container for integration tests).
 

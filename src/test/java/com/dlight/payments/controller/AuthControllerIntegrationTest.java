@@ -28,6 +28,7 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void login_withValidAdminCredentials_returnsJwt() throws Exception {
         mockMvc.perform(post("/api/auth/login")
+                        .header("X-Forwarded-For", "203.0.113.10")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequestDto("dlightadmin", "bJopnie@uu"))))
                 .andExpect(status().isOk())
@@ -38,6 +39,7 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void login_withValidUserCredentials_returnsJwt() throws Exception {
         mockMvc.perform(post("/api/auth/login")
+                        .header("X-Forwarded-For", "203.0.113.10")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequestDto("dlightuser", "njffd@4@bhfd"))))
                 .andExpect(status().isOk())
@@ -47,6 +49,7 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void login_withInvalidCredentials_returns401() throws Exception {
         mockMvc.perform(post("/api/auth/login")
+                        .header("X-Forwarded-For", "203.0.113.10")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequestDto("admin", "wrong-password"))))
                 .andExpect(status().isUnauthorized());
@@ -55,6 +58,7 @@ class AuthControllerIntegrationTest extends AbstractIntegrationTest {
     @Test
     void login_withBlankUsername_returns400() throws Exception {
         mockMvc.perform(post("/api/auth/login")
+                        .header("X-Forwarded-For", "203.0.113.10")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequestDto("", "admin123"))))
                 .andExpect(status().isBadRequest());

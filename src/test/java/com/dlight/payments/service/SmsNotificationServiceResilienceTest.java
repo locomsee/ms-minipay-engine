@@ -24,10 +24,7 @@ import com.dlight.payments.integration.sms.SmsProvider;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 
-/**
- * Exercises the real Resilience4j AOP proxy (plain Mockito unit tests bypass it),
- * so this needs a full Spring context.
- */
+
 @SpringBootTest
 class SmsNotificationServiceResilienceTest extends AbstractIntegrationTest {
 

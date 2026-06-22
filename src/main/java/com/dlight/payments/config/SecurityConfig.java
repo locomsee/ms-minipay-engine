@@ -1,5 +1,6 @@
 package com.dlight.payments.config;
 
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,7 +22,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.dlight.payments.security.JwtAccessDeniedHandler;
 import com.dlight.payments.security.JwtAuthenticationEntryPoint;
 import com.dlight.payments.security.JwtAuthenticationFilter;
+import com.dlight.payments.security.RateLimitingFilter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -46,6 +50,8 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
     private final JwtAccessDeniedHandler accessDeniedHandler;
+    private final RateLimiterRegistry rateLimiterRegistry;
+    private final ObjectMapper objectMapper;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -60,8 +66,27 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/payments").hasRole("ADMIN")
                         .requestMatchers("/api/payments/**").hasAnyRole("ADMIN", "USER")
                         .anyRequest().authenticated())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(rateLimitingFilter(), JwtAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    public RateLimitingFilter rateLimitingFilter() {
+        return new RateLimitingFilter(rateLimiterRegistry, objectMapper);
+    }
+
+    /**
+     * Spring Boot auto-registers any Filter-typed bean as a top-level servlet filter regardless
+     * of how it's defined, which would run this a second time outside the Security chain (double
+     * permit consumption, and before SecurityContextHolder is populated). This explicitly
+     * disabled registration prevents that - the filter only runs via addFilterAfter above.
+     */
+    @Bean
+    public FilterRegistrationBean<RateLimitingFilter> rateLimitingFilterRegistration(RateLimitingFilter rateLimitingFilter) {
+        FilterRegistrationBean<RateLimitingFilter> registration = new FilterRegistrationBean<>(rateLimitingFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean

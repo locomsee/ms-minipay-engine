@@ -25,10 +25,18 @@ import com.dlight.payments.entity.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 class PaymentControllerIntegrationTest extends AbstractIntegrationTest {
+
+    // Login rate limit is 5/min per IP; @BeforeEach logs in twice per test method, so each test
+    // method needs its own isolated fake IP rather than one shared per-class value (static so
+    // it persists across JUnit's per-method test instances, guaranteeing uniqueness regardless
+    // of execution order or total test count).
+    private static final AtomicInteger LOGIN_IP_SUFFIX = new AtomicInteger(20);
+    private static final String WEBHOOK_FAKE_IP = "203.0.113.99";
 
     @Autowired
     private MockMvc mockMvc;
@@ -41,12 +49,14 @@ class PaymentControllerIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        adminToken = login("dlightadmin", "bJopnie@uu");
-        userToken = login("dlightuser", "njffd@4@bhfd");
+        String fakeIp = "203.0.113." + LOGIN_IP_SUFFIX.incrementAndGet();
+        adminToken = login("dlightadmin", "bJopnie@uu", fakeIp);
+        userToken = login("dlightuser", "njffd@4@bhfd", fakeIp);
     }
 
-    private String login(String username, String password) throws Exception {
+    private String login(String username, String password, String fakeIp) throws Exception {
         String response = mockMvc.perform(post("/api/auth/login")
+                        .header("X-Forwarded-For", fakeIp)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new LoginRequestDto(username, password))))
                 .andExpect(status().isOk())
@@ -125,6 +135,7 @@ class PaymentControllerIntegrationTest extends AbstractIntegrationTest {
         // Webhook is an unauthenticated provider-callback simulation - no token needed.
         WebhookRequestDto webhook = new WebhookRequestDto(paymentId, PaymentStatus.FAILED);
         mockMvc.perform(post("/api/payments/webhook")
+                        .header("X-Forwarded-For", WEBHOOK_FAKE_IP)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(webhook)))
                 .andExpect(status().isOk())
