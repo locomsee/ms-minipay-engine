@@ -56,3 +56,6 @@ build/
 ### VS Code ###
 .vscode/
 
+
+### Internal planning docs (not for public repo) ###
+PROMPT.md
